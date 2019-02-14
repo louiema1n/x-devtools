@@ -1,6 +1,6 @@
 'use strict'
 
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 
 /**
  * Set `__static` path to static files in production
@@ -9,6 +9,8 @@ import { app, BrowserWindow } from 'electron'
 if (process.env.NODE_ENV !== 'development') {
   global.__static = require('path').join(__dirname, '/static').replace(/\\/g, '\\\\')
 }
+
+global.userDataPath = require('path').join(__dirname, './data').replace(/\\/g, '\\\\')
 
 let mainWindow
 const winURL = process.env.NODE_ENV === 'development'
@@ -26,7 +28,6 @@ function createWindow () {
   })
 
   mainWindow.loadURL(winURL)
-  mainWindow.webContents.closeDevTools()
   mainWindow.setMenuBarVisibility(false)
 
   mainWindow.on('closed', () => {
@@ -46,4 +47,13 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+ipcMain.on('open-directory-dialog', function (event, arg) {
+  dialog.showOpenDialog({properties: [arg]}, function (files) {
+    if (files) {
+      // 不为空
+      event.sender.send('selectedItem', files[0])
+    }
+  })
 })

@@ -1,7 +1,7 @@
 <template>
     <div class="layout">
         <Layout>
-            <Header>
+            <Header >
                 <Menu mode="horizontal" theme="light" active-name="1">
                     <div class="layout-logo">
                         <Icon type="md-construct" size="28"/>
@@ -9,49 +9,52 @@
                     <div class="layout-nav">
                         <MenuItem name="1">
                             <Icon type="ios-navigate"></Icon>
-                            Item 1
+                            需求管理
                         </MenuItem>
                         <MenuItem name="2">
                             <Icon type="ios-keypad"></Icon>
-                            Item 2
+                            待开发
                         </MenuItem>
                     </div>
                 </Menu>
             </Header>
             <Layout>
                 <Sider hide-trigger :style="{background: '#fff'}">
-                    <Menu active-name="1-2" theme="light" width="auto" :open-names="['1']">
-                        <Submenu name="1">
-                            <template slot="title">
-                                <Icon type="ios-navigate"></Icon>
-                                Item 1
-                            </template>
-                            <MenuItem name="1-1">Option 1</MenuItem>
-                            <MenuItem name="1-2">Option 2</MenuItem>
-                            <MenuItem name="1-3">Option 3</MenuItem>
-                        </Submenu>
-                        <Submenu name="2">
-                            <template slot="title">
-                                <Icon type="ios-keypad"></Icon>
-                                Item 2
-                            </template>
-                            <MenuItem name="2-1">Option 1</MenuItem>
-                            <MenuItem name="2-2">Option 2</MenuItem>
-                        </Submenu>
-                        <Submenu name="3">
-                            <template slot="title">
-                                <Icon type="ios-analytics"></Icon>
-                                Item 3
-                            </template>
-                            <MenuItem name="3-1">Option 1</MenuItem>
-                            <MenuItem name="3-2">Option 2</MenuItem>
-                        </Submenu>
+                    <Menu active-name="1" theme="light" width="auto" :open-names="['1']">
+                        <MenuItem v-for="(name, index) in requireNames" name="1"><Icon type="ios-navigate"></Icon>
+                                {{name}}</MenuItem>
                     </Menu>
                 </Sider>
                 <Layout :style="{padding: '5px'}">
                     <Content :style=contentStyle>
-                        Content
+                        <div style="background:#f5f7f9;padding: 1vh">
+                            <Card :bordered="false">
+                                <p slot="title">需求文档
+                                    <Icon type="md-checkmark-circle" size="20"/>
+                                </p>
+                                <p>
+                                    <Icon type="ios-document" />
+                                    2019年双节报表固化需求.docx</p>
+                            </Card>
+                            <Card :bordered="false">
+                                <p slot="title">测试文档
+                                    <Icon type="md-close-circle" size="20"/>
+                                </p>
+                            </Card>
+                            <Card :bordered="false">
+                                <p slot="title">其他文档
+                                </p>
+                            </Card>
+                            <Card :bordered="false">
+                                <p slot="title">所有文档
+                                </p>
+                                <p v-for="file in totalFiles"><Icon type="ios-document" />{{file}}</p>
+                            </Card>
+                        </div>
                     </Content>
+                    <Affix :offset-bottom="5" style="text-align: right">
+                        <Button type="primary" shape="circle" icon="md-add" @click="addRequirement"></Button>
+                    </Affix>
                 </Layout>
             </Layout>
         </Layout>
@@ -59,14 +62,17 @@
 </template>
 
 <script>
-  import {Layout, Header, Menu, MenuItem, Submenu, Sider, Icon} from 'iview'
+  import {Layout, Header, Menu, MenuItem, Submenu, Sider, Icon, Card, Affix, Button} from 'iview'
+  import {ipcRenderer} from 'electron'
 
   export default {
     name: 'landing-page',
-    components: {Layout, Header, Menu, MenuItem, Submenu, Sider, Icon},
+    components: {Layout, Header, Menu, MenuItem, Submenu, Sider, Icon, Card, Affix, Button},
     data () {
       return {
-        contentStyle: {padding: '24px', minHeight: document.documentElement.clientHeight - 84 + 'px', background: '#fff'}
+        contentStyle: {minHeight: document.documentElement.clientHeight - 84 + 'px', background: '#f5f7f9'},
+        totalFiles: [],
+        requireNames: []
       }
     },
     methods: {
@@ -75,10 +81,39 @@
       },
       resizeHandle () {
         this.contentStyle.minHeight = document.documentElement.clientHeight - 84 + 'px'
+      },
+      addRequirement () {
+        ipcRenderer.send('open-directory-dialog', 'openDirectory')
+      },
+      getPath (e, path) {
+        if (path == null) {
+          alert('请选择一个文件夹')
+        } else {
+          let fs = require('fs')
+          let all = this.totalFiles = []
+          let reName = this.requireNames = []
+          fs.readdir(path, function (err, files) {
+            if (err) {
+              return console.error(err)
+            }
+            // 处理需求名称
+            reName.push(path.substr(path.lastIndexOf('\\') + 1))
+            // 处理全部文件
+            files.forEach(function (file) {
+              all.push(file)
+            })
+          })
+        }
       }
     },
     mounted: function () {
       window.addEventListener('resize', this.resizeHandle)
+      let fs = require('fs')
+      fs.access(global.userDataPath + '/test.json', function (exists) {
+        console.log(exists)
+      })
+      // 绑定回调方法 - 处理选择文件夹
+      ipcRenderer.on('selectedItem', this.getPath)
     },
     beforeDestroy: function () {
       window.removeEventListener('resize', this.resizeHandle)
@@ -112,5 +147,16 @@
         float: right;
         margin-right: 3%;
         position: relative;
+    }
+    .ivu-icon.ivu-icon-md-checkmark-circle {
+        float: right;
+        color: #19be6b;
+    }
+    .ivu-icon.ivu-icon-md-close-circle {
+        float: right;
+        color: #ed4014;
+    }
+    .ivu-card {
+        margin-bottom: 1vh;
     }
 </style>
